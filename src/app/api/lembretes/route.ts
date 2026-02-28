@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto'
 import { CreateLembreteSchema, type Lembrete } from '@/lib/schemas'
 import { dynamoDBClient, marshall, TABLE_NAME } from '@/lib/dynamodb'
 import { schedulerClient, SCHEDULER_ROLE_ARN, SCHEDULER_TARGET_ARN } from '@/lib/scheduler'
+import { auth } from '@/auth'
 
 function buildCronExpression(horario: string): string {
   const [hour, minute] = horario.split(':')
@@ -12,6 +13,11 @@ function buildCronExpression(horario: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  }
+
   const body: unknown = await request.json()
   const parsed = CreateLembreteSchema.safeParse(body)
 
@@ -22,6 +28,7 @@ export async function POST(request: NextRequest) {
   const lembrete: Lembrete = {
     ...parsed.data,
     id: randomUUID(),
+    userId: session.user.id,
     status: 'agendado',
   }
 

@@ -8,6 +8,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { auth } from "@/auth";
+import { SignOutButton } from "@/components/header/sign-out-button";
 
 const navLinks = [
   { href: "/lembretes/novo", label: "Novo lembrete" },
@@ -30,7 +32,9 @@ function Logo() {
   );
 }
 
-export default function Header() {
+export default async function Header() {
+  const session = await auth();
+
   return (
     <header className="w-full bg-accent px-6 py-4 shadow-2xl">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -50,6 +54,22 @@ export default function Header() {
           >
             Meus lembretes
           </Link>
+
+          {session?.user ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-primary font-medium">
+                {session.user.name ?? session.user.email}
+              </span>
+              <SignOutButton />
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="text-primary font-semibold text-md hover:opacity-80 transition-opacity"
+            >
+              Entrar
+            </Link>
+          )}
         </nav>
 
         {/* Mobile nav */}
@@ -74,6 +94,21 @@ export default function Header() {
                   {label}
                 </Link>
               ))}
+              {session?.user ? (
+                <div className="px-4 py-3 flex flex-col gap-2">
+                  <span className="text-sm text-primary font-medium">
+                    {session.user.name ?? session.user.email}
+                  </span>
+                  <SignOutButton />
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-primary font-semibold text-lg px-4 py-3 rounded-xl hover:bg-background/40 transition-colors"
+                >
+                  Entrar
+                </Link>
+              )}
             </nav>
           </SheetContent>
         </Sheet>
