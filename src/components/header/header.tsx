@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/header/sign-out-button";
+import { NavTabs } from "@/components/header/nav-tabs";
 
 const navLinks = [
   { href: "/lembretes/novo", label: "Novo lembrete" },
@@ -42,18 +43,7 @@ export default async function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden sm:flex items-center gap-4">
-          <Link
-            href="/lembretes/novo"
-            className="text-primary font-bold text-md hover:opacity-80 transition-opacity"
-          >
-            Novo lembrete
-          </Link>
-          <Link
-            href="/lembretes"
-            className="bg-background text-primary text-md font-semibold px-4 py-1.5 rounded-full hover:opacity-90 transition-opacity"
-          >
-            Meus lembretes
-          </Link>
+          <NavTabs />
 
           {session?.user ? (
             <div className="flex items-center gap-3">
@@ -83,28 +73,30 @@ export default async function Header() {
           <SheetContent side="right" className="bg-accent border-border w-64">
             <SheetHeader>
               <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
+              {session?.user && (
+                <span className="text-sm text-primary font-medium">
+                    {session.user.name ?? session.user.email}
+                </span>
+              )}
             </SheetHeader>
             <nav className="flex flex-col gap-2 mt-6">
               {navLinks.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
-                  className="text-primary font-semibold text-lg px-4 py-3 rounded-xl hover:bg-background/40 transition-colors"
+                  className="text-primary-foreground text-md px-4 py-3 hover:bg-background/40 transition-colors border-b"
                 >
                   {label}
                 </Link>
               ))}
               {session?.user ? (
                 <div className="px-4 py-3 flex flex-col gap-2">
-                  <span className="text-sm text-primary font-medium">
-                    {session.user.name ?? session.user.email}
-                  </span>
                   <SignOutButton />
                 </div>
               ) : (
                 <Link
                   href="/login"
-                  className="text-primary font-semibold text-lg px-4 py-3 rounded-xl hover:bg-background/40 transition-colors"
+                  className="text-primary font-semibold text-md px-4 py-3 rounded-xl hover:bg-background/40 transition-colors"
                 >
                   Entrar
                 </Link>

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PutItemCommand } from '@aws-sdk/client-dynamodb'
-import { CreateScheduleCommand } from '@aws-sdk/client-scheduler'
+import { DeleteItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb'
+import { CreateScheduleCommand, DeleteScheduleCommand } from '@aws-sdk/client-scheduler'
 import { randomUUID } from 'crypto'
-import { CreateLembreteSchema, type Lembrete } from '@/lib/schemas'
+import { BatchDeleteSchema, CreateLembreteSchema, type Lembrete } from '@/lib/schemas'
 import { dynamoDBClient, marshall, TABLE_NAME } from '@/lib/dynamodb'
 import { schedulerClient, SCHEDULER_ROLE_ARN, SCHEDULER_TARGET_ARN } from '@/lib/scheduler'
 import { auth } from '@/auth'
@@ -50,4 +50,55 @@ export async function POST(request: NextRequest) {
   }))
 
   return NextResponse.json(lembrete, { status: 201 })
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  }
+
+  const body: unknown = await request.json();
+  const parsed = BatchDeleteSchema.safeParse(body)
+
+  if (!parsed.success) {
+    return NextResponse.json({ errors: parsed.error.flatten() }, { status: 422 })
+  }
+
+  const { ids } = parsed.data
+
+  try {
+    await Promise.all(
+      ids.map((id) =>
+        dynamoDBClient.send(new DeleteItemCommand({
+          TableName: TABLE_NAME,
+          Key: marshall({ id }),
+          ConditionExpression: 'userId = :uid',
+          ExpressionAttributeValues: { ':uid': { S: session.user!.id } },
+        }))
+      )
+    )
+  } catch (error) {
+    if ((error as { name?: string }).name === 'ConditionalCheckFailedException') {
+      return NextResponse.json(
+        { error: 'Um ou mais lembretes não encontrados ou sem permissão' },
+        { status: 403 }
+      )
+    }
+    throw error
+  }
+
+  await Promise.allSettled(
+    ids.map(async (id) => {
+      try{
+        await schedulerClient.send( new DeleteScheduleCommand({Name: id}))
+      } catch (error) {
+        if ((error as { name?: string }).name === 'ResourceNotFoundException') {
+          return
+        }
+        throw error
+      }
+    })
+  )
+  return new NextResponse(null, { status: 204 })
 }

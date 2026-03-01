@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GetItemCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb'
-import { DeleteScheduleCommand } from '@aws-sdk/client-scheduler'
+import { DeleteScheduleCommand, ResourceNotFoundException } from '@aws-sdk/client-scheduler'
 import { dynamoDBClient, marshall, unmarshall, TABLE_NAME } from '@/lib/dynamodb'
 import { schedulerClient } from '@/lib/scheduler'
 import { auth } from '@/auth'
@@ -62,7 +62,11 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     Key: marshall({ id }),
   }))
 
-  await schedulerClient.send(new DeleteScheduleCommand({ Name: id }))
+  try {
+    await schedulerClient.send(new DeleteScheduleCommand({ Name: id }))
+  } catch (err) {
+    if (!(err instanceof ResourceNotFoundException)) throw err
+  }
 
   return new Response(null, { status: 204 })
 }

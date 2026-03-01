@@ -41,6 +41,11 @@ export const UserSchema = z.object({
   createdAt: z.string().datetime(),
 })
 
+export const BatchDeleteSchema = z.object({
+   ids: z.array(z.string().uuid()).min(1),
+ })
+ 
+export type BatchDeleteInput = z.infer<typeof BatchDeleteSchema>
 export type LoginInput = z.infer<typeof LoginSchema>
 export type RegisterInput = z.infer<typeof RegisterSchema>
 export type User = z.infer<typeof UserSchema>

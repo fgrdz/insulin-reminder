@@ -74,7 +74,8 @@ export async function POST(request: NextRequest) {
   )
 
   if (!whatsappRes.ok) {
-    return NextResponse.json({ error: 'Falha ao enviar mensagem WhatsApp' }, { status: 502 })
+    const detail = await whatsappRes.json().catch(() => whatsappRes.statusText)
+    return NextResponse.json({ error: 'Falha ao enviar mensagem WhatsApp', detail }, { status: 502 })
   }
 
   return NextResponse.json({ ok: true })
