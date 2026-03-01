@@ -16,11 +16,9 @@ export const authConfig = {
         email: { label: 'E-mail', type: 'email' },
         password: { label: 'Senha', type: 'password' },
       },
-      // authorize real fica em auth.ts — aqui só validamos o schema (Edge-safe)
       authorize: async (credentials) => {
         const parsed = CredentialsSchema.safeParse(credentials)
         if (!parsed.success) return null
-        // Retorna null aqui; auth.ts sobrescreve com authorize completo
         return null
       },
     }),

@@ -46,7 +46,14 @@ export default async function Header() {
           <NavTabs />
 
           {session?.user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mx-6">
+              <Image
+                src={session.user.image ?? '/ico.png'}
+                alt="Avatar de usuário"
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
               <span className="text-sm text-primary font-medium">
                 {session.user.name ?? session.user.email}
               </span>
@@ -74,9 +81,18 @@ export default async function Header() {
             <SheetHeader>
               <SheetTitle className="sr-only">Menu de navegação</SheetTitle>
               {session?.user && (
-                <span className="text-sm text-primary font-medium">
-                    {session.user.name ?? session.user.email}
-                </span>
+                <div className="flex gap-2 items-center">
+                  <Image
+                    src={session.user.image ?? '/ico.png'}
+                    alt="Avatar de usuário"
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                  <span className="text-sm text-primary font-medium">
+                      {session.user.name ?? session.user.email}
+                  </span>
+                </div>
               )}
             </SheetHeader>
             <nav className="flex flex-col gap-2 mt-6">
