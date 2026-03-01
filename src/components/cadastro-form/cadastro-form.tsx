@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { RegisterSchema, type RegisterInput } from '@/lib/schemas'
 import {
@@ -19,7 +18,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 export function CadastroForm() {
-  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   const form = useForm<RegisterInput>({
@@ -28,8 +26,6 @@ export function CadastroForm() {
   })
 
   async function onSubmit(data: RegisterInput) {
-    setError(null)
-
     const response = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -37,12 +33,18 @@ export function CadastroForm() {
     })
 
     if (response.status === 409) {
-      setError('E-mail já cadastrado. Tente fazer login.')
+      form.setError('email', { message: 'E-mail já cadastrado' })
+      return
+    }
+
+    if (response.status === 403) {
+      const body = await response.json() as { error: string }
+      form.setError('root', { message: body.error })
       return
     }
 
     if (!response.ok) {
-      setError('Erro ao criar conta. Tente novamente.')
+      form.setError('root', { message: 'Erro ao criar conta. Tente novamente.' })
       return
     }
 
@@ -101,8 +103,8 @@ export function CadastroForm() {
             )}
           />
 
-          {error && (
-            <p className="text-sm font-medium text-destructive">{error}</p>
+          {form.formState.errors.root && (
+            <p className="text-sm font-medium text-destructive">{form.formState.errors.root.message}</p>
           )}
 
           <Button

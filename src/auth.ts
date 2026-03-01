@@ -7,7 +7,7 @@ import { DynamoDBAdapter } from '@auth/dynamodb-adapter'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { authConfig } from '@/auth.config'
-import { getUserByEmail } from '@/lib/users'
+import { countUsers, getUserByEmail } from '@/lib/users'
 
 const CredentialsSchema = z.object({
   email: z.string().email(),
@@ -47,6 +47,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
+    async signIn({ user, account }) {
+      if (account?.provider !== 'credentials') {
+        const existing = await getUserByEmail(user.email!)
+        if (!existing) {
+          const limit = Number(process.env.USER_LIMIT ?? 10)
+          const count = await countUsers()
+          if (count >= limit) return false
+        }
+      }
+      return true
+    },
     jwt({ token, user }) {
       if (user?.id) token.id = user.id
       return token

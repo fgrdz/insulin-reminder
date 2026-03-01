@@ -28,6 +28,25 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   }
 }
 
+export async function countUsers(): Promise<number> {
+  let count = 0
+  let lastKey: Record<string, unknown> | undefined
+
+  do {
+    const result = await client.scan({
+      TableName: TABLE_NAME,
+      FilterExpression: 'begins_with(pk, :prefix) AND begins_with(sk, :prefix)',
+      ExpressionAttributeValues: { ':prefix': 'USER#' },
+      Select: 'COUNT',
+      ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+    })
+    count += result.Count ?? 0
+    lastKey = result.LastEvaluatedKey as Record<string, unknown> | undefined
+  } while (lastKey)
+
+  return count
+}
+
 export async function createUser(input: RegisterInput): Promise<User> {
   const id = randomUUID()
   const now = new Date().toISOString()

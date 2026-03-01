@@ -3,8 +3,12 @@ import { GetItemCommand } from '@aws-sdk/client-dynamodb'
 import { dynamoDBClient, marshall, unmarshall, TABLE_NAME } from '@/lib/dynamodb'
 import { LembreteSchema, type Frequencia, type Status } from '@/lib/schemas'
 import { CancelButton } from './cancel-button'
+import { BadgeCheck } from 'lucide-react'
+import { VariantProps } from 'class-variance-authority'
+import { Badge, badgeVariants } from '@/components/ui/badge'
 
 type Props = { params: Promise<{ id: string }> }
+type BadgeVariant = VariantProps<typeof badgeVariants>['variant']
 
 const frequenciaLabel: Record<Frequencia, string> = {
   diaria: 'Diária',
@@ -13,16 +17,15 @@ const frequenciaLabel: Record<Frequencia, string> = {
   semanal: 'Semanal',
 }
 
-const statusStyle: Record<Status, string> = {
-  agendado: 'bg-green-100 text-green-800',
-  pausado: 'bg-yellow-100 text-yellow-800',
-  cancelado: 'bg-red-100 text-red-800',
-}
-
 const statusLabel: Record<Status, string> = {
   agendado: 'Agendado',
   pausado: 'Pausado',
   cancelado: 'Cancelado',
+}
+const statusVariant: Record<Status, BadgeVariant> = {
+  agendado: 'default',
+  pausado: 'outline',
+  cancelado: 'destructive',
 }
 
 export default async function LembretePage({ params }: Props) {
@@ -38,18 +41,19 @@ export default async function LembretePage({ params }: Props) {
   const lembrete = LembreteSchema.parse(unmarshall(result.Item))
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-6">
+    <main className="flex min-h-screen justify-center bg-background p-6">
       <div className="w-full max-w-md space-y-6">
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               {lembrete.nome} {lembrete.sobrenome}
             </h1>
             <p className="text-sm text-muted-foreground">{lembrete.telefone}</p>
           </div>
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyle[lembrete.status]}`}>
+          <Badge variant={statusVariant[lembrete.status]}>
+            <BadgeCheck />
             {statusLabel[lembrete.status]}
-          </span>
+          </Badge>
         </div>
 
         <div className="rounded-lg border bg-card p-4 space-y-3">
