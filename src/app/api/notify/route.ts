@@ -23,6 +23,12 @@ function buildTemplateBody(nome: string, dose: number) {
       language: { code: 'pt_BR' },
       components: [
         {
+          type: 'header',
+          parameters:[
+            {type: 'text', text: nome.slice(0, 5)}
+          ]
+        }
+        ,{
           type: 'body',
           parameters: [
             { type: 'text', text: nome },
@@ -73,10 +79,11 @@ export async function POST(request: NextRequest) {
     }
   )
 
+  const whatsappData: unknown = await whatsappRes.json().catch(() => whatsappRes.statusText)
+
   if (!whatsappRes.ok) {
-    const detail = await whatsappRes.json().catch(() => whatsappRes.statusText)
-    return NextResponse.json({ error: 'Falha ao enviar mensagem WhatsApp', detail }, { status: 502 })
+    return NextResponse.json({ error: 'Falha ao enviar mensagem WhatsApp', detail: whatsappData }, { status: 502 })
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, whatsapp: whatsappData })
 }
