@@ -1,116 +1,44 @@
 # AWS Setup — Insulin Reminder
 
-## DynamoDB — 2 tabelas
+## Serviços utilizados
 
-### `insulin-reminder` (lembretes)
+- **DynamoDB** — 2 tabelas (lembretes + Auth.js)
+- **EventBridge Scheduler** — agendamento das notificações diárias
+- **Lambda** — invocado pelo Scheduler para chamar `/api/notify`
+- **IAM** — usuário da aplicação + role para o Scheduler
+
+## DynamoDB
+
+### Tabela de lembretes
 | Campo | Valor |
 |---|---|
 | Partition key | `id` (String) |
 
-### `insulin-reminder-auth` (Auth.js)
+### Tabela de autenticação (Auth.js)
 | Campo | Valor |
 |---|---|
 | Partition key | `pk` (String) |
 | Sort key | `sk` (String) |
-
-
----
+| GSI | `GSI1` com `GSI1PK` / `GSI1SK` |
+| TTL | campo `expires` |
 
 ## IAM
 
-### Usuário: `insulin-reminder-app`
-Usado pela aplicação Next.js na Vercel (access key + secret).
+### Usuário da aplicação
+Crie um usuário IAM com acesso programático. A policy precisa permitir:
+- `dynamodb:GetItem`, `PutItem`, `DeleteItem`, `UpdateItem`, `Query`, `Scan` nas duas tabelas (incluindo índices da tabela auth)
+- `scheduler:CreateSchedule`, `scheduler:DeleteSchedule`
+- `iam:PassRole` na role do Scheduler
 
-**Policy inline:** `insulin-reminder-app`
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "dynamodb:GetItem",
-        "dynamodb:PutItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:UpdateItem",
-        "dynamodb:Query",
-        "dynamodb:Scan"
-      ],
-      "Resource": [
-        "arn:aws:dynamodb:*:*:table/insulin-reminder",
-        "arn:aws:dynamodb:*:*:table/insulin-reminder-auth",
-        "arn:aws:dynamodb:*:*:table/insulin-reminder-auth/index/*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "scheduler:CreateSchedule",
-        "scheduler:DeleteSchedule"
-      ],
-      "Resource": "*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::<conta>:role/insulin-reminder-scheduler-role"
-    }
-  ]
-}
-```
-
----
-
-### Role: `insulin-reminder-scheduler`
-Usado pelo EventBridge Scheduler para invocar a Lambda.
-
-**Trust policy:**
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "scheduler.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-```
-
-**Policy inline:** `insulin-reminder-scheduler`
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "lambda:InvokeFunction",
-      "Resource": "arn:aws:lambda:<região>:<conta>:function:insulin-reminder-notify"
-    }
-  ]
-}
-```
-
----
+### Role do Scheduler
+Trust policy para `scheduler.amazonaws.com` assumir a role. A policy precisa permitir `lambda:InvokeFunction` na função de notificação.
 
 ## Lambda
 
-### `insulin-reminder`
-| Campo | Valor |
-|---|---|
-| Runtime | Node.js 22.x |
-| Trigger | EventBridge Scheduler |
-| Responsabilidade | Recebe `{ id }` do Scheduler e chama `POST /api/notify` |
-
-**Variáveis de ambiente:**
-| Variável | Descrição |
-|---|---|
-| `NOTIFY_URL` | `https://<dominio>/api/notify` |
-| `NOTIFY_SECRET` | Mesmo valor do `.env` da aplicação |
----
+- **Runtime**: Node.js 22.x
+- **Trigger**: EventBridge Scheduler
+- **Responsabilidade**: recebe `{ id }` e chama `POST /api/notify`
+- **Variáveis de ambiente necessárias**: `NOTIFY_URL` e `NOTIFY_SECRET`
 
 ## Variáveis de ambiente da aplicação
 
@@ -119,15 +47,15 @@ Usado pelo EventBridge Scheduler para invocar a Lambda.
 AUTH_SECRET=
 AUTH_GOOGLE_ID=
 AUTH_GOOGLE_SECRET=
-AUTH_DYNAMODB_TABLE=insulin-reminder-auth
+AUTH_DYNAMODB_TABLE=
 
 # AWS
 AWS_REGION=
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
-DYNAMODB_TABLE_NAME=insulin-reminder
-SCHEDULER_ROLE_ARN=arn:aws:iam::<conta>:role/insulin-reminder-scheduler-role
-SCHEDULER_TARGET_ARN=arn:aws:lambda:<região>:<conta>:function:insulin-reminder-notify
+DYNAMODB_TABLE_NAME=
+SCHEDULER_ROLE_ARN=
+SCHEDULER_TARGET_ARN=
 
 # Notificação
 NOTIFY_SECRET=
@@ -136,24 +64,16 @@ WHATSAPP_PHONE_NUMBER_ID=
 WHATSAPP_TEMPLATE_NAME=
 ```
 
----
-
 ## Fluxo de notificação
 
 ```
 Usuário cria lembrete
         ↓
-API POST /api/lembretes
+POST /api/lembretes → DynamoDB.PutItem + Scheduler.CreateSchedule
         ↓
-DynamoDB.PutItem (tabela insulin-reminder)
+[no horário] Scheduler invoca Lambda
         ↓
-Scheduler.CreateSchedule (cron diário no horário configurado)
+Lambda → POST /api/notify { id }
         ↓
-[no horário] Scheduler invoca Lambda insulin-reminder-notify
-        ↓
-Lambda POST /api/notify { id }
-        ↓
-API busca lembrete no DynamoDB
-        ↓
-WhatsApp API envia mensagem ao paciente
+API busca lembrete no DynamoDB → WhatsApp API envia mensagem
 ```

@@ -22,6 +22,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useState } from 'react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircleIcon, InfoIcon } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function NovoLembretePage() {
   const [responseError, setResponseError] = useState(false);
@@ -46,6 +49,7 @@ export default function NovoLembretePage() {
 
     if (!response.ok) {
       setResponseError(true);
+      return;
     }
 
     const lembrete = await response.json() as { id: string }
@@ -56,7 +60,20 @@ export default function NovoLembretePage() {
     <main className="flex min-h-screen justify-center bg-background p-6">
       <div className="w-full max-w-md space-y-6">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Novo lembrete</h1>
+          <div className="flex items-center gap-2">
+            <h2 className="text-3xl font-semibold tracking-tight">Novo lembrete</h2>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <InfoIcon className="size-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">
+                <p>
+                  O <span className="font-medium">Insulin Reminder</span> é um projeto pessoal e de código aberto
+                  que envia lembretes para aplicação de insulina via WhatsApp no horário configurado.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <p className="text-sm text-muted-foreground">Configure seu lembrete de insulina</p>
         </div>
         <div className='self-center bg-card rounded-md shadow-2xl p-6'>
@@ -175,7 +192,13 @@ export default function NovoLembretePage() {
               </Button>
             </form>
             {responseError && (
-              <span className='w-full font-bold text-destructive text-lg'>Erro ao enviar!</span>
+              <Alert variant="destructive" className="my-2">
+                <AlertCircleIcon/>
+                <AlertTitle className="font-bold">Erro ao cadastrar lembrete</AlertTitle>
+                <AlertDescription>
+                  Tente novamente mais tarde
+                </AlertDescription>
+              </Alert>
             )}
           </Form>
         </div>
